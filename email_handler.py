@@ -92,15 +92,17 @@ import html
 
 def strip_html_tags(text):
     """
-    Removes HTML tags from a string and unescapes HTML entities.
+    Removes HTML tags from a string, unescapes HTML entities, and cleans up whitespace.
     """
     # Unescape HTML entities first
     text = html.unescape(text)
-    # Remove HTML tags
+    # Remove HTML tags (non-greedy match for robustness)
     clean = re.compile('<.*?>')
     text = re.sub(clean, '', text)
-    # Replace multiple spaces with a single space
+    # Replace multiple spaces/newlines with a single space
     text = re.sub(r'\s+', ' ', text).strip()
+    # Escape characters that might be misinterpreted by ReportLab's parser
+    text = text.replace('<', '&lt;').replace('>', '&gt;')
     return text
 
 def get_email_content(service, message_id):
