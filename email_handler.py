@@ -88,12 +88,20 @@ def search_emails(service, query):
         return []
 
 
+import html
+
 def strip_html_tags(text):
     """
-    Removes HTML tags from a string.
+    Removes HTML tags from a string and unescapes HTML entities.
     """
+    # Unescape HTML entities first
+    text = html.unescape(text)
+    # Remove HTML tags
     clean = re.compile('<.*?>')
-    return re.sub(clean, '', text)
+    text = re.sub(clean, '', text)
+    # Replace multiple spaces with a single space
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 def get_email_content(service, message_id):
     """
@@ -190,7 +198,7 @@ def create_pdf_from_emails(emails, date_range):
                 story.append(Paragraph(info, styles["BodyText"]))
             story.append(Spacer(1, 12))
 
-        story.append(Paragraph(email["snippet"], styles["BodyText"]))
+        story.append(Paragraph(strip_html_tags(email["snippet"]), styles["BodyText"]))
         story.append(Spacer(1, 24))
 
     doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
