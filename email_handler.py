@@ -115,17 +115,24 @@ def get_email_content(service, message_id):
         return None
 
 
-def create_pdf_from_emails(emails):
+def create_pdf_from_emails(emails, date_range):
     """
     Generates a PDF file from the content of a list of emails.
 
     Args:
         emails: A list of email message objects.
+        date_range: A dictionary containing 'after' and 'before' dates.
 
     Returns:
         The filename of the generated PDF.
     """
-    doc = SimpleDocTemplate(PDF_FILENAME, pagesize=letter)
+    pdf_base_name = os.path.splitext(PDF_FILENAME)[0]
+    if date_range and "after" in date_range and "before" in date_range:
+        pdf_file_name = f"{pdf_base_name}_{date_range['after'].replace('/','')}_{date_range['before'].replace('/','')}.pdf"
+    else:
+        pdf_file_name = PDF_FILENAME
+
+    doc = SimpleDocTemplate(pdf_file_name, pagesize=letter)
     styles = getSampleStyleSheet()
     
     # Add a new style for bold text

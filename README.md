@@ -8,6 +8,7 @@ This Python application connects to a Gmail account, selects emails based on use
 *   **Connects to Gmail**: Securely authenticates with your Gmail account using the Gmail API.
 *   **Advanced, Customizable Filtering**: Use a dedicated `criteria.json` file to define complex search queries, including date ranges and multiple search terms with logical AND/OR operators.
 *   **Enhanced PDF Compilation**: Automatically generates a single PDF file containing the content of the selected emails, with the following features:
+    *   **Dynamic Filename**: The PDF filename will include the specified date range (e.g., `forwarded_emails_YYYYMMDD_YYYYMMDD.pdf`).
     *   **Page Numbers**: Each page is numbered for easy reference.
     *   **Formatted Headers**: The email subject and date are displayed in bold for better readability.
     *   **Dollar Amount Extraction**: Automatically finds and lists any dollar amounts mentioned in the email body.

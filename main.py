@@ -107,7 +107,8 @@ def main():
         return
 
     # 4. Create a PDF from the emails
-    pdf_filename = create_pdf_from_emails(emails)
+    date_range = criteria.get("date_range", {})
+    pdf_filename = create_pdf_from_emails(emails, date_range)
 
     # 5. Send the PDF as an attachment
     sent_message = send_email_with_attachment(service, pdf_filename)
