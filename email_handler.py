@@ -89,28 +89,26 @@ def search_emails(service, query):
         return []
 
 
-import html
+from html.parser import HTMLParser
 
-def strip_html_tags(text):
-    """
-    Removes HTML tags and their attributes from a string, unescapes HTML entities,
-    and cleans up whitespace.
-    """
-    # Unescape HTML entities first
-    text = html.unescape(text)
+class HTMLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.text = []
 
-    # Remove all content within angle brackets, including attributes
-    # This is a more aggressive approach to ensure no HTML syntax remains
-    text = re.sub(r'<[^>]*>', '', text)
+    def handle_data(self, data):
+        self.text.append(data)
 
-    # Replace multiple spaces/newlines with a single space
-    text = re.sub(r'\s+', ' ', text).strip()
+    def get_data(self):
+        return ''.join(self.text)
 
-    # Escape any remaining literal < or > characters that might be part of text
-    # but could be misinterpreted by ReportLab if not already removed by regex
-    text = text.replace('<', '&lt;').replace('>', '&gt;')
-
-    return text
+def strip_html_tags(html_text):
+    s = HTMLStripper()
+    s.feed(html_text)
+    return s.get_data()
 
 def get_email_content(service, message_id):
     """
