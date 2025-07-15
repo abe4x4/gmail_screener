@@ -99,8 +99,8 @@ Open the `criteria.json` file to define your email search criteria. Here is an e
 ```json
 {
   "date_range": {
-    "after": "2024/01/01",
-    "before": "2025/12/31"
+    "from": "2024/01/01",
+    "to": "2025/12/31"
   },
   "include": {
     "logical_operator": "OR",
@@ -127,8 +127,8 @@ Open the `criteria.json` file to define your email search criteria. Here is an e
 ```
 
 *   `date_range`: (Optional) Specify a time period for the email search.
-    *   `after`: (Optional) The start date (YYYY/MM/DD).
-    *   `before`: (Optional) The end date (YYYY/MM/DD).
+    *   `from`: (Optional) The start date (YYYY/MM/DD).
+    *   `to`: (Optional) The end date (YYYY/MM/DD).
 *   `include`: (Optional) Defines the criteria for emails to include. The application will also look for keywords like "total", "amount due", "paid", "charged", "invoice", "receipt", "order", "purchase" within the email body.
     *   `logical_operator`: (Optional) The logical operator to use when combining multiple `include` terms. Can be `AND` or `OR`. Defaults to `AND`.
     *   `terms`: A list of search terms to include. These follow the standard Gmail search query format.

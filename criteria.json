@@ -1,7 +1,7 @@
 {
   "date_range": {
-    "after": "2024/01/01",
-    "before": "2025/12/31"
+    "from": "2019/12/31",
+    "to": "2020/12/31"
   },
   "include": {
     "logical_operator": "OR",

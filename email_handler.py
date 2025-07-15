@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Email Handler for the Gmail Screener application.
@@ -19,6 +18,7 @@ application's workflow.
 import base64
 import os
 import re
+import html
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -59,10 +59,10 @@ def get_gmail_service():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request(http=http_client))
+            creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_console(local_server_httplib2_request=http_client)
+            creds = flow.run_console()
         with open("token.json", "w") as token:
             token.write(creds.to_json())
 
@@ -113,6 +113,18 @@ def strip_html_tags(html_text):
     s.feed(html_text)
     return s.get_data()
 
+def sanitize_text(text):
+    """
+    Strips HTML tags and escapes special characters for PDF generation.
+    """
+    if not text:
+        return ""
+    # First, strip HTML tags
+    stripped_text = strip_html_tags(text)
+    # Then, escape special characters
+    return html.escape(stripped_text)
+
+
 def get_email_content(service, message_id):
     """
     Fetches the full content of a specific email.
@@ -149,7 +161,7 @@ def create_pdf_from_emails(emails, date_range):
         date_range: A dictionary containing 'after' and 'before' dates.
 
     Returns:
-        The filename of the generated PDF.
+        The filename of the generated PDF, or None if an error occurs.
     """
     pdf_base_name = os.path.splitext(PDF_FILENAME)[0]
     if date_range and "after" in date_range and "before" in date_range:
@@ -182,51 +194,69 @@ def create_pdf_from_emails(emails, date_range):
         date = next((h["value"] for h in headers if h["name"] == "Date"), "N/A")
         full_body = email.get('full_body', '')
 
-        story.append(Paragraph(f"<b>Subject: {subject}</b>", styles["h2"]))
-        story.append(Paragraph(f"<b>Date: {date}</b>", styles["h3"]))
-        story.append(Paragraph(f"From: {from_email}", styles["h3"]))
+        # Sanitize all content before adding to the PDF
+        safe_subject = sanitize_text(subject)
+        safe_date = sanitize_text(date)
+        safe_from_email = sanitize_text(from_email)
+        safe_full_body = sanitize_text(full_body)
+        safe_snippet = sanitize_text(email["snippet"])
+
+        story.append(Paragraph(f"<b>Subject: {safe_subject}</b>", styles["h2"]))
+        story.append(Paragraph(f"<b>Date: {safe_date}</b>", styles["h3"]))
+        story.append(Paragraph(f"From: {safe_from_email}", styles["h3"]))
         story.append(Spacer(1, 12))
         
-        # Extract dollar amounts from the email body
-        dollar_amounts = re.findall(r'\$\d+(?:,\d{3})*(?:\.\d{2})?', full_body)
+        # Extract dollar amounts from the sanitized email body
+        dollar_amounts = re.findall(r'\$\d+(?:,\d{3})*(?:\.\d{2})?', safe_full_body)
         if dollar_amounts:
             story.append(Paragraph("<b>Dollar Amounts Found:</b>", styles['Bold']))
             for amount in dollar_amounts:
-                story.append(Paragraph(amount, styles["BodyText"]))
+                story.append(Paragraph(sanitize_text(amount), styles["BodyText"]))
             story.append(Spacer(1, 12))
 
-        # Extract expense/purchase related information
+        # Extract expense/purchase related information from the sanitized email body
         expense_keywords = ["total", "amount due", "paid", "charged", "invoice", "receipt", "order", "purchase"]
         expense_info = []
-        for line in full_body.splitlines():
+        for line in safe_full_body.splitlines():
             if any(keyword in line.lower() for keyword in expense_keywords):
                 expense_info.append(line.strip())
         
         if expense_info:
             story.append(Paragraph("<b>Expense/Purchase Details:</b>", styles['Bold']))
             for info in expense_info:
-                story.append(Paragraph(info, styles["BodyText"]))
+                story.append(Paragraph(sanitize_text(info), styles["BodyText"]))
             story.append(Spacer(1, 12))
 
-        story.append(Paragraph(strip_html_tags(email["snippet"]), styles["BodyText"]))
+        story.append(Paragraph(safe_snippet, styles["BodyText"]))
         story.append(Spacer(1, 24))
 
-    doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
-    print("PDF generation complete.")
-    return pdf_file_name
+    try:
+        doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        print("PDF generation complete.")
+        return pdf_file_name
+    except Exception as e:
+        print(f"An error occurred during PDF generation: {e}")
+        return None
 
-def send_email_with_attachment(service, pdf_filename):
+
+def send_email_with_attachment(service, pdf_filename, date_range):
     """
     Sends an email with the generated PDF as an attachment.
 
     Args:
         service: The authenticated Gmail API service object.
         pdf_filename: The filename of the PDF to attach.
+        date_range: A dictionary containing 'after' and 'before' dates.
     """
     try:
         message = MIMEMultipart()
         message["to"] = FORWARD_TO_EMAIL
-        message["subject"] = "Forwarded Emails in PDF"
+
+        if date_range and "from" in date_range and "to" in date_range:
+            subject = f"Emails from {date_range['from']} to {date_range['to']}"
+        else:
+            subject = "Forwarded Emails in PDF"
+        message["subject"] = subject
 
         # Email body
         body = MIMEText("Please find the attached PDF containing the forwarded emails.")
@@ -253,6 +283,7 @@ def send_email_with_attachment(service, pdf_filename):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return None
+
 
 def mark_emails_as_read(service, message_ids):
     """

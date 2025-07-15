@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Main script for the Gmail Screener application.
@@ -41,10 +40,10 @@ def build_search_query(criteria):
     """
     query_parts = []
     if "date_range" in criteria:
-        if "after" in criteria["date_range"]:
-            query_parts.append(f"after:{criteria['date_range']['after']}")
-        if "before" in criteria["date_range"]:
-            query_parts.append(f"before:{criteria['date_range']['before']}")
+        if "from" in criteria["date_range"]:
+            query_parts.append(f"after:{criteria['date_range']['from']}")
+        if "to" in criteria["date_range"]:
+            query_parts.append(f"before:{criteria['date_range']['to']}")
     
     if "include" in criteria and "terms" in criteria["include"] and criteria["include"]["terms"]:
         operator = f" {criteria['include'].get('logical_operator', 'AND')} "
@@ -110,8 +109,12 @@ def main():
     date_range = criteria.get("date_range", {})
     pdf_filename = create_pdf_from_emails(emails, date_range)
 
+    if not pdf_filename:
+        print("PDF generation failed. Exiting.")
+        return
+
     # 5. Send the PDF as an attachment
-    sent_message = send_email_with_attachment(service, pdf_filename)
+    sent_message = send_email_with_attachment(service, pdf_filename, date_range)
 
     # 6. Mark the emails as read if the email was sent successfully
     if sent_message:
