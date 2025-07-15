@@ -63,7 +63,7 @@ def get_gmail_service():
         with open("token.json", "w") as token:
             token.write(creds.to_json())
 
-    return build("gmail", "v1", credentials=creds, http=httplib2.Http(timeout=90))
+    return build("gmail", "v1", credentials=creds)
 
 
 def search_emails(service, query):
