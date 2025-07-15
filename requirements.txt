@@ -1,0 +1,22 @@
+
+# requirements.txt
+#
+# This file lists the Python packages that need to be installed for the
+# Gmail Screener application to run. You can install all of these
+# packages at once by running the following command in your terminal:
+#
+# pip install -r requirements.txt
+#
+
+# Google API Client Library for Python
+google-api-python-client
+
+# Google Authentication Library for Python
+google-auth-httplib2
+
+# Google OAuth Library for Python
+google-auth-oauthlib>=1.0.0
+
+# ReportLab for PDF Generation
+# This library is used to create the PDF file from the email content.
+reportlab
