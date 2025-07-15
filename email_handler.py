@@ -93,9 +93,23 @@ def get_email_content(service, message_id):
     Fetches the full content of a specific email.
     """
     try:
-        return (
-            service.users().messages().get(userId="me", id=message_id, format="full").execute()
-        )
+        email_data = service.users().messages().get(userId="me", id=message_id, format="full").execute()
+        payload = email_data['payload']
+        parts = payload.get('parts', [])
+
+        full_body = ""
+        if parts:
+            for part in parts:
+                if part['mimeType'] == 'text/plain' and 'data' in part['body']:
+                    full_body += base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                elif part['mimeType'] == 'text/html' and 'data' in part['body']:
+                    # Optionally process HTML content, for now, we'll just get plain text
+                    pass
+        elif 'body' in payload and 'data' in payload['body']:
+            full_body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8')
+
+        email_data['full_body'] = full_body
+        return email_data
     except HttpError as error:
         print(f"An error occurred while fetching email content: {error}")
         return None
@@ -134,6 +148,7 @@ def create_pdf_from_emails(emails):
         subject = next((h["value"] for h in headers if h["name"] == "Subject"), "N/A")
         from_email = next((h["value"] for h in headers if h["name"] == "From"), "N/A")
         date = next((h["value"] for h in headers if h["name"] == "Date"), "N/A")
+        full_body = email.get('full_body', '')
 
         story.append(Paragraph(f"<b>Subject: {subject}</b>", styles["h2"]))
         story.append(Paragraph(f"<b>Date: {date}</b>", styles["h3"]))
@@ -141,21 +156,24 @@ def create_pdf_from_emails(emails):
         story.append(Spacer(1, 12))
         
         # Extract dollar amounts from the email body
-        body = ""
-        if 'parts' in email['payload']:
-            for part in email['payload']['parts']:
-                if part['mimeType'] == 'text/plain':
-                    body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
-                    break
-        else:
-            if 'body' in email['payload'] and 'data' in email['payload']['body']:
-                body = base64.urlsafe_b64decode(email['payload']['body']['data']).decode('utf-8')
-
-        dollar_amounts = re.findall(r'\$\d+(?:,\d{3})*(?:\.\d{2})?', body)
+        dollar_amounts = re.findall(r'\$\d+(?:,\d{3})*(?:\.\d{2})?', full_body)
         if dollar_amounts:
             story.append(Paragraph("<b>Dollar Amounts Found:</b>", styles['Bold']))
             for amount in dollar_amounts:
                 story.append(Paragraph(amount, styles["BodyText"]))
+            story.append(Spacer(1, 12))
+
+        # Extract expense/purchase related information
+        expense_keywords = ["total", "amount due", "paid", "charged", "invoice", "receipt", "order", "purchase"]
+        expense_info = []
+        for line in full_body.splitlines():
+            if any(keyword in line.lower() for keyword in expense_keywords):
+                expense_info.append(line.strip())
+        
+        if expense_info:
+            story.append(Paragraph("<b>Expense/Purchase Details:</b>", styles['Bold']))
+            for info in expense_info:
+                story.append(Paragraph(info, styles["BodyText"]))
             story.append(Spacer(1, 12))
 
         story.append(Paragraph(email["snippet"], styles["BodyText"]))
