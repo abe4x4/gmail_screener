@@ -28,11 +28,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-import httplib2
 from reportlab.lib.pagesizes import letter
 
-# Define a global HTTP client with a timeout
-_HTTP_CLIENT = httplib2.Http(timeout=90)
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_RIGHT
@@ -54,19 +51,21 @@ def get_gmail_service():
     Handles the OAuth 2.0 flow and saves credentials for future use.
     """
     creds = None
+    http_client = httplib2.Http(timeout=90) # Define HTTP client with timeout
+
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(Request(http=http_client))
         else:
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_console(local_server_httplib2_request=_HTTP_CLIENT)
+            creds = flow.run_console(local_server_httplib2_request=http_client)
         with open("token.json", "w") as token:
             token.write(creds.to_json())
 
-    return build("gmail", "v1", credentials=creds, http=_HTTP_CLIENT)
+    return build("gmail", "v1", credentials=creds)
 
 
 def search_emails(service, query):
