@@ -88,6 +88,13 @@ def search_emails(service, query):
         return []
 
 
+def strip_html_tags(text):
+    """
+    Removes HTML tags from a string.
+    """
+    clean = re.compile('<.*?>')
+    return re.sub(clean, '', text)
+
 def get_email_content(service, message_id):
     """
     Fetches the full content of a specific email.
@@ -103,10 +110,10 @@ def get_email_content(service, message_id):
                 if part['mimeType'] == 'text/plain' and 'data' in part['body']:
                     full_body += base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
                 elif part['mimeType'] == 'text/html' and 'data' in part['body']:
-                    # Optionally process HTML content, for now, we'll just get plain text
-                    pass
+                    # Prioritize HTML content if available and strip tags
+                    full_body += strip_html_tags(base64.urlsafe_b64decode(part['body']['data']).decode('utf-8'))
         elif 'body' in payload and 'data' in payload['body']:
-            full_body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8')
+            full_body = strip_html_tags(base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8'))
 
         email_data['full_body'] = full_body
         return email_data
@@ -149,7 +156,7 @@ def create_pdf_from_emails(emails, date_range):
         text = "Page %s" % page_num
         canvas.drawRightString(200, 20, text)
 
-    print(f"Generating PDF file: {PDF_FILENAME}...")
+    print(f"Generating PDF file: {pdf_file_name}...")
     for email in emails:
         headers = email["payload"]["headers"]
         subject = next((h["value"] for h in headers if h["name"] == "Subject"), "N/A")
@@ -188,7 +195,7 @@ def create_pdf_from_emails(emails, date_range):
 
     doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
     print("PDF generation complete.")
-    return PDF_FILENAME
+    return pdf_file_name
 
 def send_email_with_attachment(service, pdf_filename):
     """
