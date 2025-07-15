@@ -30,6 +30,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import httplib2
 from reportlab.lib.pagesizes import letter
+
+# Define a global HTTP client with a timeout
+_HTTP_CLIENT = httplib2.Http(timeout=90)
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_RIGHT
@@ -56,14 +59,14 @@ def get_gmail_service():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(Request(http=_HTTP_CLIENT))
         else:
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_console()
+            creds = flow.run_console(local_server_httplib2_request=_HTTP_CLIENT)
         with open("token.json", "w") as token:
             token.write(creds.to_json())
 
-    return build("gmail", "v1", credentials=creds)
+    return build("gmail", "v1", credentials=creds, http=_HTTP_CLIENT)
 
 
 def search_emails(service, query):
