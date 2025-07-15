@@ -51,4 +51,4 @@ PDF_FILENAME = "forwarded_emails.pdf"
 
 # Whether to mark the processed emails as read.
 # This can help prevent the same emails from being included in the PDF again.
-MARK_AS_READ = True
+MARK_AS_READ = True # Set to True to mark emails as read after processing.
