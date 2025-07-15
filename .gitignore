@@ -31,3 +31,4 @@ credentials.json
 *.pyc
 *.log
 criteria.back
+backup/
